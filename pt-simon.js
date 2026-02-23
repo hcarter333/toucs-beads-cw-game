@@ -384,6 +384,37 @@ function logMessage(message) {
 
 console.log = logMessage;
 
+async function copyManualTestTemplate() {
+  const template = document.getElementById("manualTestTemplate");
+  const status = document.getElementById("manualTestCopyStatus");
+  if (!template) return;
+
+  let copied = false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(template.value);
+      copied = true;
+    }
+  } catch (error) {
+    console.warn("Clipboard API copy failed, falling back", error);
+  }
+
+  if (!copied) {
+    template.focus();
+    template.select();
+    template.setSelectionRange(0, template.value.length);
+    try {
+      copied = document.execCommand("copy");
+    } catch (error) {
+      copied = false;
+    }
+  }
+
+  if (status) {
+    status.textContent = copied ? "Copied to clipboard" : "Copy failed (select text manually)";
+  }
+}
+
 function keyPress() {
   if (keydown === 0) {
     const now = performance.now();
@@ -536,5 +567,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const startGameButton = document.getElementById("startGameButton");
   if (startGameButton) {
     startGameButton.addEventListener("click", playMorseK);
+  }
+
+  const copyTemplateButton = document.getElementById("copyManualTestTemplateButton");
+  if (copyTemplateButton) {
+    copyTemplateButton.addEventListener("click", copyManualTestTemplate);
   }
 });
