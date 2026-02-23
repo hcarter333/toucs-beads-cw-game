@@ -98,6 +98,16 @@
         counts.fail += 1;
       }
     };
+    const recordAsync = async (fn, title, detail) => {
+      try {
+        await fn();
+        pass(title, detail);
+        counts.pass += 1;
+      } catch (error) {
+        fail(title, error.message);
+        counts.fail += 1;
+      }
+    };
 
     try {
       reloadAppFrame();
@@ -131,6 +141,84 @@
         );
       }, "Core functions are defined");
 
+      const testApi = win.cwSimonTestApi;
+      if (!testApi) {
+        todo(
+          "cw-05x.3 sequence/catalog tests",
+          "Stable hooks not exposed yet. Track test API follow-up in cw-z8p."
+        );
+        counts.todo += 1;
+      } else {
+        record(() => {
+          const catalog = testApi.morseCatalog;
+          assert(Array.isArray(catalog), "morseCatalog should be an array");
+          assert(catalog.length === 36, "morseCatalog should include A-Z and 0-9");
+
+          const symbols = catalog.map((entry) => entry.symbol);
+          const uniqueSymbols = new Set(symbols);
+          assert(uniqueSymbols.size === symbols.length, "morseCatalog symbols should be unique");
+
+          const expectedSymbols = [
+            ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""),
+            ..."0123456789".split(""),
+          ];
+          expectedSymbols.forEach((symbol) => {
+            assert(uniqueSymbols.has(symbol), `Missing symbol ${symbol}`);
+          });
+
+          catalog.forEach((entry) => {
+            assert(typeof entry.code === "string" && entry.code.length > 0, `Missing code for ${entry.symbol}`);
+            assert(/^[.-]+$/.test(entry.code), `Invalid Morse code chars for ${entry.symbol}`);
+          });
+
+          const map = Object.fromEntries(catalog.map((entry) => [entry.symbol, entry.code]));
+          assert(map.A === ".-", "Expected A=.-");
+          assert(map.K === "-.-", "Expected K=-.-");
+          assert(map["5"] === ".....", "Expected 5=.....");
+          assert(map["0"] === "-----", "Expected 0=-----");
+        }, "Morse catalog completeness and mappings");
+
+        record(() => {
+          const before = JSON.stringify(testApi.morseCatalog);
+          for (let i = 0; i < 200; i++) {
+            const picked = testApi.chooseRandomMorseSymbol(() => i / 199);
+            assert(picked && typeof picked.symbol === "string", "Chooser should return catalog entry");
+            assert(
+              testApi.morseCatalog.some((entry) => entry.symbol === picked.symbol && entry.code === picked.code),
+              `Chooser returned non-catalog entry: ${JSON.stringify(picked)}`
+            );
+          }
+          const after = JSON.stringify(testApi.morseCatalog);
+          assert(before === after, "Chooser should not mutate catalog");
+        }, "Random chooser returns catalog-only entries without mutation");
+
+        await recordAsync(async () => {
+          const sequence = testApi.createMorseSequenceState();
+          assert(Array.isArray(sequence.read()), "Sequence read() should return an array");
+          assert(sequence.read().length === 0, "Sequence should start empty");
+
+          sequence.append("A");
+          sequence.append("5");
+          sequence.append("K");
+          const firstRead = sequence.read();
+          assert(firstRead.join(",") === "A,5,K", "append() should preserve order");
+
+          const secondRead = sequence.read();
+          assert(secondRead.join(",") === "A,5,K", "read() should be non-mutating");
+          secondRead.push("Z");
+          assert(sequence.read().join(",") === "A,5,K", "read() snapshot should be isolated");
+
+          const replayed = [];
+          await sequence.replay(async (symbol) => {
+            replayed.push(symbol);
+          });
+          assert(replayed.join(",") === "A,5,K", "replay() should replay stored order");
+          assert(sequence.read().join(",") === "A,5,K", "replay() should be non-mutating");
+          sequence.reset();
+          assert(sequence.read().length === 0, "reset() should clear sequence");
+        }, "Sequence state append/read/replay/reset behavior");
+      }
+
       record(() => {
         const before = doc.getElementById("1").textContent;
         win.enter(doc.getElementById("1"));
@@ -142,11 +230,6 @@
         assert(afterLeave === "off", "leave() should set text to 'off'");
       }, "Basic paddle UI handlers work");
 
-      todo(
-        "cw-05x.3 sequence/catalog tests",
-        "Add assertions once catalog/sequence APIs are exposed (e.g., window.cwSimonTestApi)"
-      );
-      counts.todo += 1;
     } catch (error) {
       fail("Harness runtime", error.message);
       counts.fail += 1;
@@ -163,4 +246,13 @@
       setSummary("Pass 0 | Fail 1 | Todo 0");
     });
   });
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("autorun") === "1") {
+    runSmokeTests().catch((error) => {
+      clearResults();
+      fail("Harness fatal", error.message);
+      setSummary("Pass 0 | Fail 1 | Todo 0");
+    });
+  }
 })();

@@ -29,9 +29,105 @@ let morsePlaybackActive = false;
 let morseOverlayFadeTimeout = null;
 
 const MORSE_OVERLAY_FADE_MS = 500;
-const MORSE_PATTERNS = {
-  k: [3, 1, 3], // -.- (dash dot dash)
-};
+const MORSE_CATALOG = [
+  { symbol: "A", code: ".-" },
+  { symbol: "B", code: "-..." },
+  { symbol: "C", code: "-.-." },
+  { symbol: "D", code: "-.." },
+  { symbol: "E", code: "." },
+  { symbol: "F", code: "..-." },
+  { symbol: "G", code: "--." },
+  { symbol: "H", code: "...." },
+  { symbol: "I", code: ".." },
+  { symbol: "J", code: ".---" },
+  { symbol: "K", code: "-.-" },
+  { symbol: "L", code: ".-.." },
+  { symbol: "M", code: "--" },
+  { symbol: "N", code: "-." },
+  { symbol: "O", code: "---" },
+  { symbol: "P", code: ".--." },
+  { symbol: "Q", code: "--.-" },
+  { symbol: "R", code: ".-." },
+  { symbol: "S", code: "..." },
+  { symbol: "T", code: "-" },
+  { symbol: "U", code: "..-" },
+  { symbol: "V", code: "...-" },
+  { symbol: "W", code: ".--" },
+  { symbol: "X", code: "-..-" },
+  { symbol: "Y", code: "-.--" },
+  { symbol: "Z", code: "--.." },
+  { symbol: "0", code: "-----" },
+  { symbol: "1", code: ".----" },
+  { symbol: "2", code: "..---" },
+  { symbol: "3", code: "...--" },
+  { symbol: "4", code: "....-" },
+  { symbol: "5", code: "....." },
+  { symbol: "6", code: "-...." },
+  { symbol: "7", code: "--..." },
+  { symbol: "8", code: "---.." },
+  { symbol: "9", code: "----." },
+];
+
+const MORSE_CATALOG_BY_SYMBOL = Object.freeze(
+  MORSE_CATALOG.reduce((acc, entry) => {
+    acc[entry.symbol.toLowerCase()] = entry;
+    return acc;
+  }, {})
+);
+
+function morseCodeToPattern(code) {
+  return String(code)
+    .split("")
+    .map((char) => (char === "-" ? 3 : 1));
+}
+
+const MORSE_PATTERNS = Object.freeze(
+  Object.keys(MORSE_CATALOG_BY_SYMBOL).reduce((acc, symbol) => {
+    acc[symbol] = morseCodeToPattern(MORSE_CATALOG_BY_SYMBOL[symbol].code);
+    return acc;
+  }, {})
+);
+
+function chooseRandomMorseSymbol(randomFn = Math.random) {
+  if (MORSE_CATALOG.length === 0) return null;
+  const index = Math.floor(randomFn() * MORSE_CATALOG.length);
+  const safeIndex = Math.min(MORSE_CATALOG.length - 1, Math.max(0, index));
+  return MORSE_CATALOG[safeIndex];
+}
+
+function normalizeSequenceSymbol(value) {
+  return String(value == null ? "" : value).trim().toUpperCase();
+}
+
+function createMorseSequenceState() {
+  const playedSymbols = [];
+
+  return {
+    append(symbol) {
+      const normalized = normalizeSequenceSymbol(symbol);
+      if (!normalized || !MORSE_CATALOG_BY_SYMBOL[normalized.toLowerCase()]) {
+        throw new Error(`Unsupported sequence symbol: ${symbol}`);
+      }
+      playedSymbols.push(normalized);
+      return normalized;
+    },
+    read() {
+      return playedSymbols.slice();
+    },
+    async replay(playFn) {
+      const snapshot = playedSymbols.slice();
+      for (let i = 0; i < snapshot.length; i++) {
+        await playFn(snapshot[i], i, snapshot);
+      }
+      return snapshot;
+    },
+    reset() {
+      playedSymbols.length = 0;
+    },
+  };
+}
+
+const morseSimonSequenceState = createMorseSequenceState();
 
 async function ensureAudioReady() {
   if (!note_context) {
@@ -158,16 +254,17 @@ function fadeOutMorseLetterOverlay() {
 async function sendMorseMessage(text) {
   if (morsePlaybackActive) return;
 
-  const displayText = String(text || "");
-  const normalized = displayText.trim().toLowerCase();
+  const displayText = String(text || "").trim();
+  const normalized = displayText.toLowerCase();
+  const entry = MORSE_CATALOG_BY_SYMBOL[normalized];
   const pattern = MORSE_PATTERNS[normalized];
-  if (!pattern) {
+  if (!entry || !pattern) {
     console.warn(`Unsupported Morse text: ${displayText}`);
     return;
   }
 
   morsePlaybackActive = true;
-  showMorseLetterOverlay(displayText);
+  showMorseLetterOverlay(entry.symbol);
 
   try {
     await ensureAudioReady();
@@ -188,6 +285,27 @@ async function sendMorseMessage(text) {
 
 async function playMorseK() {
   await sendMorseMessage("k");
+}
+
+async function playMorseSymbolSequence(symbols) {
+  const sequence = Array.isArray(symbols) ? symbols.slice() : [];
+  for (let i = 0; i < sequence.length; i++) {
+    await sendMorseMessage(sequence[i]);
+    if (i < sequence.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, UNIT_MS * 3));
+    }
+  }
+}
+
+async function playNextSimonRound() {
+  if (morsePlaybackActive) return;
+  const nextEntry = chooseRandomMorseSymbol();
+  if (!nextEntry) return;
+  morseSimonSequenceState.append(nextEntry.symbol);
+  await morseSimonSequenceState.replay(async (symbol) => {
+    await sendMorseMessage(symbol);
+    await new Promise((resolve) => setTimeout(resolve, UNIT_MS * 3));
+  });
 }
 
 function gapAdjust(delta) {
@@ -621,7 +739,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const startGameButton = document.getElementById("startGameButton");
   if (startGameButton) {
-    startGameButton.addEventListener("click", () => sendMorseMessage("k"));
+    startGameButton.addEventListener("click", () => {
+      playNextSimonRound().catch((error) => console.warn("Simon round playback failed", error));
+    });
   }
 
   const copyTemplateButton = document.getElementById("copyManualTestTemplateButton");
@@ -629,3 +749,20 @@ document.addEventListener("DOMContentLoaded", () => {
     copyTemplateButton.addEventListener("click", copyManualTestTemplate);
   }
 });
+
+window.cwSimonTestApi = {
+  morseCatalog: MORSE_CATALOG.map((entry) => ({ ...entry })),
+  chooseRandomMorseSymbol,
+  createMorseSequenceState,
+  getSequenceSnapshot() {
+    return morseSimonSequenceState.read();
+  },
+  resetSequence() {
+    morseSimonSequenceState.reset();
+  },
+  async replaySequence(playFn) {
+    return morseSimonSequenceState.replay(playFn);
+  },
+  playNextSimonRound,
+  playMorseSymbolSequence,
+};
