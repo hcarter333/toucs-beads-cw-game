@@ -24,3 +24,75 @@ python3 -m http.server 8000
 Then open:
 
 - `http://localhost:8000/specs/browser-test-harness.html`
+
+## Agent Testing Workflow (Browser Harness)
+
+Use the harness as the default smoke-test step for Simon tasks that touch
+`cwsimon.html` or `pt-simon.js`.
+
+### When to use it
+
+- After any UI wiring change in `cwsimon.html`
+- After changes to event handlers or initialization in `pt-simon.js`
+- Before closing beads such as `cw-05x.2`, `cw-05x.3`, and follow-on Simon tasks
+
+### Standard agent steps
+
+1. Start a local server from the repo root:
+
+   ```bash
+   cd /home/hcarter/gt/cwtoucsgt/mayor/rig
+   python3 -m http.server 8000
+   ```
+
+2. Open the harness in a browser (Windows browser from WSL is OK):
+
+   - `http://localhost:8000/specs/browser-test-harness.html`
+   - or `\\wsl$\...` path for manual open if needed
+
+3. Click `Run Smoke Tests`.
+
+4. Confirm:
+
+   - App frame loads (`cwsimon.html`)
+   - `pt-simon.js` is loaded
+   - Core controls/functions still exist
+   - No obvious console/runtime breakage in page initialization
+
+5. Record the outcome in bead notes / work notes:
+
+   - Harness run status (pass/fail count)
+   - Any failing check names
+   - Whether manual browser-only checks were also performed (audio, Web Serial)
+
+### What the harness covers today
+
+- Static page/script wiring smoke checks
+- DOMContentLoaded UI control creation checks
+- Presence of key global functions used by current features
+- Basic paddle enter/leave UI handler behavior
+
+### What still needs manual testing
+
+- Audio playback behavior / timing (browser gesture + audio policy dependent)
+- Web Serial / HALI key integration
+- Touch interaction on real device hardware
+- Visual polish and timing-sensitive animation/fade checks for future tasks
+
+### Future extension pattern (for agents)
+
+When implementing new Simon features, add targeted harness assertions in
+`specs/browser-test-harness.js` for the new behavior when stable hooks exist.
+
+- Prefer checking stable DOM/state hooks over brittle text scraping
+- If needed, expose a small test API (see bead `cw-z8p`) for catalog/sequence
+  assertions in `cw-05x.3+`
+- Keep the harness no-build and browser-only (no npm, no test framework)
+
+### Failure handling
+
+- If the harness cannot access the iframe app DOM, you likely opened it from
+  `file://` with browser cross-origin restrictions enabled. Re-run over
+  `http://localhost`.
+- If smoke tests fail after your change, do not close the bead until the failure
+  is fixed or explicitly documented as expected with a follow-up bead.
