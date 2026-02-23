@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>CSimon Morse Trainer</title>
+    <link rel="icon" href="./favicon.ico" sizes="any" />
+    <meta name="title" content="CSimon Morse Trainer" />
+    <meta name="description" content="CSimon standalone Morse practice" />
+    <meta name="author" content="Project TouCans" />
+    <meta name="theme-color" content="#222" />
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: sans-serif;
+        background-color: #111;
+        color: #fff;
+      }
+
+      #metdivid {
+        padding: 1rem;
+        overflow-y: auto;
+        min-height: 60vh;
+      }
+
+      #elements {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        height: 170px;
+        z-index: 9999;
+        display: flex;
+      }
+
+      #elements > div {
+        border: 2px solid #000;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2em;
+      }
+
+      #\31,
+      #\33 {
+        flex: 1;
+      }
+
+      #\32 {
+        flex: 0 0 auto;
+        width: 18%;
+      }
+
+      #console {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40px;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        font-size: 0.85rem;
+        padding: 0.5rem;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <img
+        width="100%"
+        src="./toucs_banner.jpg"
+        alt="Project Toucans banner showing a friendly toucan, propagation arcs, and a ham radio by the sea."
+      />
+      <h1>Welcome to Project TouCans CSimon Practice</h1>
+      <p>Use the virtual paddles or the HALI key to practice iambic CW. Histograms and controls load below.</p>
+      <button id="startGameButton" type="button">Start Game</button>
+    </div>
+
+    <div>
+      <input hidden type="text" id="inetAddress" placeholder="e.g., 192.168.1.100" />
+      <div id="metdivid"></div>
+    </div>
+
+    <div id="elements" class="elements">
+      <div id="1">1</div>
+      <div id="2">2</div>
+      <div id="3">3</div>
+    </div>
+
+    <div id="console" class="console"></div>
+
+    <script src="./pt-simon.js"></script>
+  </body>
+</html>
