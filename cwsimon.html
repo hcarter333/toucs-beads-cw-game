@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-manual-test-panel-visible="true">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,6 +20,11 @@
         font-family: sans-serif;
         background-color: #111;
         color: #fff;
+      }
+
+      html[data-manual-test-panel-visible="true"] body {
+        padding-bottom: 290px;
+        box-sizing: border-box;
       }
 
       #metdivid {
@@ -70,6 +75,59 @@
         padding: 0.5rem;
         box-sizing: border-box;
       }
+
+      #manualTestPanel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 40px;
+        max-height: 250px;
+        overflow: auto;
+        background: rgba(12, 18, 28, 0.95);
+        border-top: 1px solid #2f3a47;
+        padding: 0.75rem;
+        box-sizing: border-box;
+        z-index: 9000;
+      }
+
+      html[data-manual-test-panel-visible="false"] #manualTestPanel {
+        display: none;
+      }
+
+      #manualTestPanel h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1rem;
+      }
+
+      #manualTestPanel p {
+        margin: 0 0 0.5rem;
+        font-size: 0.85rem;
+        color: #d3d8df;
+      }
+
+      #manualTestPanel ul {
+        margin: 0 0 0.75rem 1rem;
+        padding: 0;
+        font-size: 0.85rem;
+      }
+
+      #manualTestPanel li {
+        margin-bottom: 0.25rem;
+      }
+
+      #manualTestTemplate {
+        width: 100%;
+        min-height: 120px;
+        resize: vertical;
+        border: 1px solid #3a4655;
+        background: #0b1220;
+        color: #f4f7fb;
+        padding: 0.5rem;
+        box-sizing: border-box;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.8rem;
+        line-height: 1.3;
+      }
     </style>
   </head>
   <body>
@@ -94,6 +152,51 @@
       <div id="2">2</div>
       <div id="3">3</div>
     </div>
+
+    <section id="manualTestPanel" aria-label="Manual test guidance panel">
+      <h2>Manual Test Checklist + Bead Notes Template</h2>
+      <p>
+        Use this during convoy work. Run the browser harness first, then manual checks (audio/timing/Web Serial),
+        and paste the filled template into the relevant bead notes.
+      </p>
+      <ul>
+        <li>Run harness: <code>specs/browser-test-harness.html</code> and click "Run Smoke Tests"</li>
+        <li>Verify Start Game button behavior for the current task</li>
+        <li>Check browser console for errors on load and interaction</li>
+        <li>If task touches audio/timing, manually verify playback and fade/timing behavior</li>
+        <li>If task touches HALI/Web Serial, manually verify device flow (browser permission + key behavior)</li>
+        <li>Paste results into bead notes and mention pass/fail per check</li>
+      </ul>
+      <textarea id="manualTestTemplate" spellcheck="false">Manual test date: YYYY-MM-DD
+Environment: Browser name/version + OS (for example: Chrome on Windows via WSL http://localhost:8000)
+Bead: cw-____ (task id)
+Task build/commit tested: <commit hash or "working tree">
+Harness: Pass X / Fail Y / Todo Z
+
+Manual checks run:
+- [ ] Page loads cwsimon.html without obvious runtime breakage
+- [ ] Start Game button behavior matches current task requirements
+- [ ] No unexpected console errors during tested interactions
+- [ ] Audio/timing behavior manually verified (if applicable)
+- [ ] Web Serial / HALI key flow manually verified (if applicable)
+- [ ] Visual UI/overlay/fade behavior manually verified (if applicable)
+
+PASS:
+- 
+
+FAIL:
+- 
+
+Console errors:
+- none
+
+Notes / observations:
+- 
+
+Next action for agent:
+- Fix ______ and rerun harness + relevant manual checks
+</textarea>
+    </section>
 
     <div id="console" class="console"></div>
 
