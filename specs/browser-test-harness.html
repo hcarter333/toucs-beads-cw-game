@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CSimon Browser Test Harness</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --panel-2: #1f2937;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --ok: #10b981;
+        --fail: #ef4444;
+        --warn: #f59e0b;
+        --link: #93c5fd;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        background: radial-gradient(circle at top, #1e293b, var(--bg));
+        color: var(--text);
+      }
+
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      .panel {
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      button {
+        background: #0ea5e9;
+        color: #03111b;
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: #334155;
+        color: var(--text);
+      }
+
+      code {
+        color: var(--link);
+      }
+
+      #summary {
+        font-weight: 700;
+      }
+
+      #results {
+        list-style: none;
+        padding: 0;
+        margin: 12px 0 0;
+      }
+
+      #results li {
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: var(--panel-2);
+        margin-bottom: 8px;
+        border-left: 4px solid #64748b;
+      }
+
+      #results li.pass {
+        border-left-color: var(--ok);
+      }
+
+      #results li.fail {
+        border-left-color: var(--fail);
+      }
+
+      #results li.todo {
+        border-left-color: var(--warn);
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      iframe {
+        width: 100%;
+        height: 520px;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>CSimon Browser Test Harness</h1>
+        <p class="muted">
+          Minimal no-build smoke tests for <code>../cwsimon.html</code> and
+          <code>../pt-simon.js</code>. Recommended usage is via a local HTTP
+          server (for iframe same-origin access).
+        </p>
+        <div class="controls">
+          <button id="runTestsButton" type="button">Run Smoke Tests</button>
+          <button id="reloadFrameButton" class="secondary" type="button">Reload App Frame</button>
+          <span id="summary">Idle</span>
+        </div>
+        <ul id="results" aria-live="polite"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>App Frame</h2>
+        <p class="muted">
+          The frame below loads the real app page so tests exercise the static
+          integration path.
+        </p>
+        <iframe id="appFrame" title="CSimon app under test" src="../cwsimon.html"></iframe>
+      </section>
+    </main>
+
+    <script src="./browser-test-harness.js"></script>
+  </body>
+</html>
