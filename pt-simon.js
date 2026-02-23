@@ -26,6 +26,12 @@ let serialPort = null;
 let prevCTS = null;
 let lastElementTouched = null;
 let morsePlaybackActive = false;
+let morseOverlayFadeTimeout = null;
+
+const MORSE_OVERLAY_FADE_MS = 500;
+const MORSE_PATTERNS = {
+  k: [3, 1, 3], // -.- (dash dot dash)
+};
 
 async function ensureAudioReady() {
   if (!note_context) {
@@ -114,25 +120,74 @@ function stopSidetone() {
   }
 }
 
-async function playMorseK() {
+function showMorseLetterOverlay(text) {
+  const overlay = document.getElementById("morseLetterOverlay");
+  if (!overlay) return;
+
+  if (morseOverlayFadeTimeout !== null) {
+    clearTimeout(morseOverlayFadeTimeout);
+    morseOverlayFadeTimeout = null;
+  }
+
+  overlay.style.transitionDuration = `${MORSE_OVERLAY_FADE_MS}ms`;
+  overlay.textContent = text;
+  overlay.classList.remove("visible");
+  void overlay.offsetWidth;
+  overlay.classList.add("visible");
+}
+
+function fadeOutMorseLetterOverlay() {
+  const overlay = document.getElementById("morseLetterOverlay");
+  if (!overlay) return;
+
+  overlay.style.transitionDuration = `${MORSE_OVERLAY_FADE_MS}ms`;
+  overlay.classList.remove("visible");
+
+  if (morseOverlayFadeTimeout !== null) {
+    clearTimeout(morseOverlayFadeTimeout);
+  }
+
+  morseOverlayFadeTimeout = window.setTimeout(() => {
+    if (!overlay.classList.contains("visible")) {
+      overlay.textContent = "";
+    }
+    morseOverlayFadeTimeout = null;
+  }, MORSE_OVERLAY_FADE_MS);
+}
+
+async function sendMorseMessage(text) {
   if (morsePlaybackActive) return;
+
+  const displayText = String(text || "");
+  const normalized = displayText.trim().toLowerCase();
+  const pattern = MORSE_PATTERNS[normalized];
+  if (!pattern) {
+    console.warn(`Unsupported Morse text: ${displayText}`);
+    return;
+  }
+
   morsePlaybackActive = true;
+  showMorseLetterOverlay(displayText);
+
   try {
     await ensureAudioReady();
-    const unit = UNIT_MS;
-    const pattern = [3, 1, 3]; // K = dash dot dash
     for (let i = 0; i < pattern.length; i++) {
-      playSidetone();
-      await new Promise((resolve) => setTimeout(resolve, pattern[i] * unit));
-      stopSidetone();
+      keyPress();
+      await new Promise((resolve) => setTimeout(resolve, pattern[i] * UNIT_MS));
+      keyRelease();
       if (i < pattern.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, unit));
+        await new Promise((resolve) => setTimeout(resolve, UNIT_MS));
       }
     }
   } finally {
     stopSidetone();
     morsePlaybackActive = false;
+    fadeOutMorseLetterOverlay();
   }
+}
+
+async function playMorseK() {
+  await sendMorseMessage("k");
 }
 
 function gapAdjust(delta) {
@@ -429,7 +484,7 @@ function keyPress() {
     dtime = now;
     keydown = 1;
     ensureAudioReady();
-    if (practiceMode) {
+    if (practiceMode || morsePlaybackActive) {
       playSidetone();
     }
   }
@@ -451,7 +506,7 @@ function keyRelease() {
   utime = now;
 
   // local practice sidetone off
-  if (practiceMode) {
+  if (practiceMode || morsePlaybackActive) {
     stopSidetone();
   }
 }
@@ -566,7 +621,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const startGameButton = document.getElementById("startGameButton");
   if (startGameButton) {
-    startGameButton.addEventListener("click", playMorseK);
+    startGameButton.addEventListener("click", () => sendMorseMessage("k"));
   }
 
   const copyTemplateButton = document.getElementById("copyManualTestTemplateButton");

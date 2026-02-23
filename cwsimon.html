@@ -63,6 +63,27 @@
         width: 18%;
       }
 
+      #morseLetterOverlay {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        font-size: clamp(6rem, 24vw, 18rem);
+        font-weight: 700;
+        text-transform: none;
+        color: rgba(255, 255, 255, 0.95);
+        text-shadow: 0 0 24px rgba(0, 0, 0, 0.7);
+        opacity: 0;
+        transition-property: opacity;
+        transition-timing-function: ease;
+        z-index: 10000;
+      }
+
+      #morseLetterOverlay.visible {
+        opacity: 1;
+      }
+
       #console {
         position: fixed;
         bottom: 0;
@@ -173,6 +194,8 @@
       <div id="2">2</div>
       <div id="3">3</div>
     </div>
+
+    <div id="morseLetterOverlay" aria-live="polite" aria-atomic="true"></div>
 
     <section id="manualTestPanel" aria-label="Manual test guidance panel">
       <h2>Manual Test Checklist + Bead Notes Template</h2>
