@@ -96,3 +96,43 @@ When implementing new Simon features, add targeted harness assertions in
   `http://localhost`.
 - If smoke tests fail after your change, do not close the bead until the failure
   is fixed or explicitly documented as expected with a follow-up bead.
+
+## Manual Test Request Handoff Template (Agent -> Human)
+
+When agents need human-only verification (UX/audio/hardware), they should
+record details in the bead notes and send a short nudge/mail using a consistent
+template.
+
+### Bead notes template (agent fills this in)
+
+```text
+Manual test requested (human):
+- Bead: cw-____
+- Commit/branch tested: <commit hash or branch>
+- Page: cwsimon.html
+- Harness result: Pass X / Fail Y / Todo Z
+- Smoke test summary: <short summary>
+- Manual checks requested:
+  - UX/visual behavior: <what to verify>
+  - Audio/timing: <what to verify>
+  - HALI/Web Serial (if applicable): <what to verify>
+- Known caveats / expected issues:
+  - <none or list>
+- How to report back:
+  - Paste results into bead notes using the in-app Manual Test Template panel
+```
+
+### Nudge/mail message template (agent sends this)
+
+```text
+<bead-id> ready for manual testing.
+Smoke tests: Pass X / Fail Y / Todo Z (harness).
+Please run UX/audio/hardware checks in cwsimon.html and paste results into the bead notes using the in-app template.
+Specific checks: <one-line list>.
+```
+
+### Signaling guidance
+
+- Prefer bead notes as the durable source of truth
+- Use `gt nudge` for immediate attention while a session is active
+- Use `gt mail send` if the recipient may not be active right now
