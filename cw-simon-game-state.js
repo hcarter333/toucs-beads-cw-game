@@ -193,14 +193,88 @@
     throw new Error("Unknown Simon game event type: " + type);
   }
 
+  function createTimingDependencies(options) {
+    const opts = options || {};
+    const now =
+      typeof opts.now === "function"
+        ? opts.now
+        : function defaultNow() {
+            return Date.now();
+          };
+    const setTimeoutFn =
+      typeof opts.setTimeout === "function"
+        ? opts.setTimeout
+        : typeof setTimeout === "function"
+          ? setTimeout
+          : null;
+    const clearTimeoutFn =
+      typeof opts.clearTimeout === "function"
+        ? opts.clearTimeout
+        : typeof clearTimeout === "function"
+          ? clearTimeout
+          : null;
+
+    function schedule(callback, delayMs) {
+      if (typeof callback !== "function") {
+        throw new Error("schedule requires a callback function");
+      }
+      if (!setTimeoutFn) {
+        throw new Error("No setTimeout implementation configured");
+      }
+      const handle = setTimeoutFn(callback, Math.max(0, Number(delayMs) || 0));
+      return {
+        handle,
+        cancel() {
+          if (!clearTimeoutFn) return false;
+          clearTimeoutFn(handle);
+          return true;
+        },
+      };
+    }
+
+    return {
+      now() {
+        return Number(now());
+      },
+      schedule,
+    };
+  }
+
   function createSimonGameStateModel(options) {
     const opts = options || {};
     const chooseNextSymbol = typeof opts.chooseNextSymbol === "function" ? opts.chooseNextSymbol : null;
+    const onStateChange = typeof opts.onStateChange === "function" ? opts.onStateChange : null;
+    const timing = createTimingDependencies(opts.timing || opts);
+    let inputTimeoutTask = null;
     let state = createInitialGameState();
 
     function dispatch(event) {
       state = reduceSimonGameState(state, event);
-      return cloneState(state);
+      const snapshot = cloneState(state);
+      if (onStateChange) {
+        onStateChange(snapshot, event || null);
+      }
+      return snapshot;
+    }
+
+    function cancelInputTimeout() {
+      if (!inputTimeoutTask) return false;
+      const canceled = inputTimeoutTask.cancel();
+      inputTimeoutTask = null;
+      return canceled;
+    }
+
+    function scheduleInputTimeout(delayMs, callback) {
+      cancelInputTimeout();
+      inputTimeoutTask = timing.schedule(function () {
+        inputTimeoutTask = null;
+        if (typeof callback === "function") {
+          callback(cloneState(state));
+          return;
+        }
+        dispatch({ type: EVENT_TYPE.TIMEOUT });
+      }, delayMs);
+      return inputTimeoutTask;
     }
 
     function chooseSymbolOrThrow(explicitSymbol) {
@@ -220,11 +294,19 @@
       getState() {
         return cloneState(state);
       },
+      now() {
+        return timing.now();
+      },
+      schedule(callback, delayMs) {
+        return timing.schedule(callback, delayMs);
+      },
       dispatch,
       reset() {
+        cancelInputTimeout();
         return dispatch({ type: EVENT_TYPE.RESET });
       },
       restart(nextSymbol) {
+        cancelInputTimeout();
         if (nextSymbol == null) {
           return dispatch({ type: EVENT_TYPE.RESTART });
         }
@@ -243,8 +325,11 @@
         return dispatch({ type: EVENT_TYPE.INPUT, symbol: symbol });
       },
       markInputTimeout() {
+        cancelInputTimeout();
         return dispatch({ type: EVENT_TYPE.TIMEOUT });
       },
+      scheduleInputTimeout,
+      cancelInputTimeout,
     };
   }
 
@@ -256,6 +341,7 @@
     createInitialGameState,
     cloneState,
     reduceSimonGameState,
+    createTimingDependencies,
     createSimonGameStateModel,
   });
 });

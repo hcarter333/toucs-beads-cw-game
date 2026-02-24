@@ -91,6 +91,78 @@
     return list[safeIndex];
   }
 
+  function createRandomMorseChooser(options) {
+    const opts = options || {};
+    const catalog = Array.isArray(opts.catalog) ? opts.catalog.slice() : MORSE_CATALOG.slice();
+    const random = typeof opts.random === "function" ? opts.random : Math.random;
+
+    return {
+      catalog() {
+        return catalog.slice();
+      },
+      chooseEntry() {
+        return chooseRandomMorseSymbol(random, catalog);
+      },
+      chooseSymbol() {
+        const entry = chooseRandomMorseSymbol(random, catalog);
+        return entry ? entry.symbol : null;
+      },
+    };
+  }
+
+  function createTimingAdapter(options) {
+    const opts = options || {};
+    const nowFn =
+      typeof opts.now === "function"
+        ? opts.now
+        : function defaultNow() {
+            return Date.now();
+          };
+    const setTimeoutFn =
+      typeof opts.setTimeout === "function"
+        ? opts.setTimeout
+        : typeof setTimeout === "function"
+          ? setTimeout
+          : null;
+    const clearTimeoutFn =
+      typeof opts.clearTimeout === "function"
+        ? opts.clearTimeout
+        : typeof clearTimeout === "function"
+          ? clearTimeout
+          : null;
+
+    function schedule(callback, delayMs) {
+      if (typeof callback !== "function") {
+        throw new Error("schedule requires a callback function");
+      }
+      if (!setTimeoutFn) {
+        throw new Error("No setTimeout implementation configured");
+      }
+      const delay = Math.max(0, Number(delayMs) || 0);
+      const handle = setTimeoutFn(callback, delay);
+      return {
+        handle,
+        cancel() {
+          if (!clearTimeoutFn) return false;
+          clearTimeoutFn(handle);
+          return true;
+        },
+      };
+    }
+
+    return {
+      now() {
+        return Number(nowFn());
+      },
+      schedule,
+      delay(delayMs) {
+        return new Promise((resolve) => {
+          schedule(resolve, delayMs);
+        });
+      },
+    };
+  }
+
   function createMorseSequenceState(options) {
     const opts = options || {};
     const supportedMap = opts.catalogBySymbol || MORSE_CATALOG_BY_SYMBOL;
@@ -343,6 +415,8 @@
     normalizeSequenceSymbol,
     isSupportedSequenceSymbol,
     chooseRandomMorseSymbol,
+    createRandomMorseChooser,
+    createTimingAdapter,
     createMorseSequenceState,
     wpmToUnitMs,
     unitMsToWpm,
