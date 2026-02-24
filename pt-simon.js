@@ -750,10 +750,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+const cwSimonGameStateApi =
+  typeof window !== "undefined" && window.cwSimonGameState ? window.cwSimonGameState : null;
+
 window.cwSimonTestApi = {
   morseCatalog: MORSE_CATALOG.map((entry) => ({ ...entry })),
   chooseRandomMorseSymbol,
   createMorseSequenceState,
+  simonGameState: cwSimonGameStateApi,
   getSequenceSnapshot() {
     return morseSimonSequenceState.read();
   },
@@ -765,4 +769,20 @@ window.cwSimonTestApi = {
   },
   playNextSimonRound,
   playMorseSymbolSequence,
+  createSimonGameStateModel(options = {}) {
+    if (!cwSimonGameStateApi) {
+      throw new Error("cwSimonGameState module is not loaded");
+    }
+    const chooser =
+      typeof options.chooseNextSymbol === "function"
+        ? options.chooseNextSymbol
+        : () => {
+            const picked = chooseRandomMorseSymbol();
+            return picked ? picked.symbol : null;
+          };
+    return cwSimonGameStateApi.createSimonGameStateModel({
+      ...options,
+      chooseNextSymbol: chooser,
+    });
+  },
 };
