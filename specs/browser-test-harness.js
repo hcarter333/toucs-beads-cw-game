@@ -149,6 +149,33 @@
         );
         counts.todo += 1;
       } else {
+        await recordAsync(async () => {
+          assert(typeof testApi.iambicInputEventName === "string", "Expected iambic input event name");
+          assert(typeof testApi.getIambicInputEvents === "function", "Expected iambic input event reader");
+          assert(typeof testApi.resetIambicInputEvents === "function", "Expected iambic input event reset");
+
+          testApi.resetIambicInputEvents();
+          const received = [];
+          const handler = (event) => received.push(event.detail);
+          win.addEventListener(testApi.iambicInputEventName, handler);
+
+          try {
+            const startPromise = win.startIambic("1");
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            win.leave({ textContent: "" });
+            await startPromise;
+          } finally {
+            win.removeEventListener(testApi.iambicInputEventName, handler);
+          }
+
+          const snapshot = testApi.getIambicInputEvents();
+          assert(received.length >= 1, "Expected at least one emitted iambic input event");
+          assert(snapshot.length >= 1, "Expected iambic input event log entries");
+          assert(received[0].symbol === ".", "Expected sideId=1 to emit '.'");
+          assert(received[0].sideId === "1", "Expected sideId to be normalized to string '1'");
+          assert(snapshot[0].symbol === ".", "Expected logged iambic event symbol '.'");
+        }, "Iambic keyer emits Simon input events");
+
         record(() => {
           const catalog = testApi.morseCatalog;
           assert(Array.isArray(catalog), "morseCatalog should be an array");

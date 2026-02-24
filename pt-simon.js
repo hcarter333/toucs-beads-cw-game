@@ -29,6 +29,7 @@ let morsePlaybackActive = false;
 let morseOverlayFadeTimeout = null;
 
 const MORSE_OVERLAY_FADE_MS = 500;
+const CW_SIMON_IAMBIC_INPUT_EVENT = "cw:simon:iambic-input";
 const MORSE_CATALOG = [
   { symbol: "A", code: ".-" },
   { symbol: "B", code: "-..." },
@@ -128,6 +129,23 @@ function createMorseSequenceState() {
 }
 
 const morseSimonSequenceState = createMorseSequenceState();
+const simonIambicInputEvents = [];
+
+function emitSimonIambicInput(detail) {
+  const payload = { ...detail };
+  simonIambicInputEvents.push(payload);
+  if (simonIambicInputEvents.length > 1024) {
+    simonIambicInputEvents.shift();
+  }
+  if (
+    typeof window !== "undefined" &&
+    typeof window.dispatchEvent === "function" &&
+    typeof CustomEvent === "function"
+  ) {
+    window.dispatchEvent(new CustomEvent(CW_SIMON_IAMBIC_INPUT_EVENT, { detail: payload }));
+  }
+  return payload;
+}
 
 async function ensureAudioReady() {
   if (!note_context) {
@@ -660,9 +678,19 @@ async function startIambic(sideId) {
   iambicActive = true;
   const myToken = ++iambicToken;
 
-  const toneUnits = sideId === "3" ? 3 : 1; // 3 for id=3, 1 for id=1
+  const normalizedSideId = String(sideId);
+  const toneUnits = normalizedSideId === "3" ? 3 : 1; // 3 for id=3, 1 for id=1
+  const symbol = toneUnits === 3 ? "-" : ".";
 
   while (myToken === iambicToken) {
+    emitSimonIambicInput({
+      symbol,
+      sideId: normalizedSideId,
+      toneUnits,
+      unitMs: UNIT_MS,
+      token: myToken,
+      timestampMs: Date.now(),
+    });
     keyPress();
     await sleep(toneUnits * UNIT_MS); // tone duration
     keyRelease();
@@ -756,9 +784,16 @@ const cwSimonGameStateApi =
 window.cwSimonTestApi = {
   morseCatalog: MORSE_CATALOG.map((entry) => ({ ...entry })),
   logic: typeof window !== "undefined" ? window.CWSimonLogic || null : null,
+  iambicInputEventName: CW_SIMON_IAMBIC_INPUT_EVENT,
   chooseRandomMorseSymbol,
   createMorseSequenceState,
   simonGameState: cwSimonGameStateApi,
+  getIambicInputEvents() {
+    return simonIambicInputEvents.map((entry) => ({ ...entry }));
+  },
+  resetIambicInputEvents() {
+    simonIambicInputEvents.length = 0;
+  },
   getSequenceSnapshot() {
     return morseSimonSequenceState.read();
   },
