@@ -752,6 +752,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 window.cwSimonTestApi = {
   morseCatalog: MORSE_CATALOG.map((entry) => ({ ...entry })),
+  logic: typeof window !== "undefined" ? window.CWSimonLogic || null : null,
   chooseRandomMorseSymbol,
   createMorseSequenceState,
   getSequenceSnapshot() {
