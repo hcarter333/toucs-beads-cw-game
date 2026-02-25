@@ -39,12 +39,12 @@ When the player enters a letter incorrectly they lose the game. We then need a s
 ### config pane specification
 Configuration settings are contained in a panel that is displayed when the user presses a settings button denoted by a gear wheel icon. The user should have an x button on the panel to make it disappear so they can return to the game.
 
-###Words per minute specification
+### Words per minute specification
 This is where the user will be able to set the words per minute. Remember, this is done simply by adjusting UNIT_MS.
 
 Letter speed (controlled by UNIT_MS) and word speed (the space between characters set by default to 7*UNIT_MS) should be individually configurable. Look up the change in UNIT_MS to change  one word per minute (WPM) the ui should work in units of WPM. 
  
-###Losing raspberry sound mute
+### Losing raspberry sound mute
 This will also be where they can turn on and off the losing sound
  
 ### game defaults 
